@@ -1,14 +1,13 @@
-from Tkinter import *
+from tkinter import *
 import os
 import pickle
-import tkFileDialog as tkfd
+import tkinter.filedialog as tkfd
 import sys
 modules=sys.modules
 #from nested_class import nested_pickle
 
 TOPDIR=os.getcwd()
 os.chdir('resources')
-
 class GridCanvas(Canvas):
     def __init__(self,boss,width,height,csize,onclic):
         wd=(csize+1)*width-1
@@ -479,14 +478,14 @@ class Application:
         return self
 
     def save(self,fname):
-        f=open(fname,'w')
+        f=open(fname,'wb')
         p=pickle.Pickler(f)
         p.persistent_id=self.persistent_id
         p.dump(self.l)
         f.close()
 
     def open_(self,fname):
-        f=open(fname,'r')
+        f=open(fname,'rb')
         p=pickle.Unpickler(f)
         p.persistent_load=self.persistent_load
         self.l=p.load()
@@ -668,7 +667,7 @@ class Application:
                 dic[name]=d
         w=Toplevel(self.tk)
         w.title("Statistics")
-        txt="\n - ".join(["%s:%s"%i for i in dic.items()])
+        txt="\n - ".join(["%s:%s"%i for i in list(dic.items())])
         if txt=="":
             txt="Nothing"
         lbl=Label(w,text="Your machine uses:\n - "+txt,justify=LEFT)
@@ -725,7 +724,7 @@ class Application:
                     self.chpos(x,y,z,p.rotate(self,x,y,z))
             self.draw()
         except RuntimeError:
-            print "Warning : will cause stack overflow"
+            print("Warning : will cause stack overflow")
 
     def getplane(self,plane):
         level=plane[1]
@@ -1230,10 +1229,6 @@ Sticky_Piston_Down=Sticky_Piston_all([0,-1,0],[0,4,0])
 
 Inverters=rotated(Inverter,4)
 t=Inverters(0,0,0,0)
-#print (t.__class__ is ClassContainer._Inverter0)
-#print ClassContainer._Inverter0.__name__
-#b=pickle.dumps(t)
-#print str(b)
 Diodes=rotated(Diode,4)
 Ands=rotated(And,4)
 Nands=rotated(Nand,4)
@@ -1246,5 +1241,6 @@ Sticky_Pistons=rotated(Sticky_Piston,4)
 a.set_buttons(Normal_block,Mesecon,Switch,Inverters,Diodes,Ands,Nands,Xors,Insulateds,
               Insulated_ts,RedLightStone,Pistons,Piston_Up,Piston_Down,Sticky_Pistons,Sticky_Piston_Up,
               Sticky_Piston_Down)
+
 os.chdir(TOPDIR)
 a.mainloop()
