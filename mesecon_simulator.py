@@ -4,7 +4,6 @@ import pickle
 import tkFileDialog as tkfd
 import sys
 modules=sys.modules
-#from nested_class import nested_pickle
 
 TOPDIR=os.getcwd()
 os.chdir('resources')
