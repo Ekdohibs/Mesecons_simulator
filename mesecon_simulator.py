@@ -435,11 +435,30 @@ class Application:
         self.maxcoords=(maxc,maxc,maxc)
         self.curplane=(1,0) #plane (x,z) at y level 0
         self.can.draw(self.l[0],0)
+        self.abms=[]
+        self.abm_gen=0
+        self.abm()
         self.tk.bind("<Key-0x003c>",self.levup)
         self.tk.bind("<Key-0x003e>",self.levdown)
         self.tk.bind("<r>",self.rotate)
         self.tk.bind("<Control-o>",self.open_command)
         self.tk.bind("<Control-s>",self.save_command)
+
+    def abm(self):
+        self.abm_gen+=1
+        for c,t in self.abms:
+            if self.abm_gen%t==0:
+                c()
+        self.draw()
+        self.tk.after(100,self.abm)
+
+    def register_abm(self,c,t):
+        if (c,t) not in self.abms:
+            self.abms.append((c,t))
+
+    def unregister_abm(self,c,t):
+        if (c,t) in self.abms:
+            self.abms.remove((c,t))
 
     def rotate(self,evnt):
         d=(self.curplane[0]+1)%3
@@ -860,6 +879,43 @@ class RedLightStone(Mesecon_thing):
 
     def update_outputs(self):
         self.st=(sum(self.istates)>=1)
+
+class Sand(object):
+    name="Sand"
+    t="sand"
+    p=PhotoImage(file='sand.gif')
+    def __init__(self,boss,x,y,z):
+        self.boss=boss
+        self.x,self.y,self.z=x,y,z
+        self.boss.register_abm(self.abm,1)
+
+    def image(self,d):
+        return self.p
+
+    @classmethod
+    def imagedraw(cls):
+        return cls.p
+
+    def abm(self):
+        if self.y==0:
+            return
+        below=self.boss.l[self.x][self.y-1][self.z]
+        if below==None:
+            self.boss.chpos(self.x,self.y-1,self.z,self)
+            self.boss.chpos(self.x,self.y,self.z,None)
+            self.y-=1
+            if self.y<self.boss.maxcoords[1]-2:
+                above=self.boss.l[self.x][self.y+2][self.z]
+                if above and above.t=="sand":
+                    above.abm()
+
+    def update_pos(self,xadd,yadd,zadd):
+        self.x+=xadd
+        self.y+=yadd
+        self.z+=zadd
+
+    def onremove(self):
+        self.boss.unregister_abm(self.abm,1)
             
 class ClassContainer:
     pass
@@ -1043,6 +1099,38 @@ def Insulated_t(i):
             return cls.p[0][1]
     return _Insulated_t
 
+def Delayer(i):
+    rin=rotate_left_n([[0,0,1]],i)
+    rout=rotate_left_n([[0,0,-1]],i)
+    class _Delayer(Mesecon_thing):
+        name="Delayer"
+        p=[[[PhotoImage(file='delayer_%s_%s_off.gif'%(k,(i+1)%4)),
+            PhotoImage(file='delayer_%s_%s_off.gif'%(k,i)),
+            PhotoImage(file='delayer_%s_%s_off.gif'%(k,(-i+2)%4))],
+           [PhotoImage(file='delayer_%s_%s_on.gif'%(k,(i+1)%4)),
+            PhotoImage(file='delayer_%s_%s_on.gif'%(k,i)),
+            PhotoImage(file='delayer_%s_%s_on.gif'%(k,(-i+2)%4))]] for k in range(4)]
+        def __init__(self,boss,x,y,z):
+            Mesecon_thing.__init__(self,rin,rout)
+            self.boss=boss
+            self.timer=0
+
+        def image(self,d):
+            return self.p[self.timer][self.ostates[0]][d]
+
+        @classmethod
+        def imagedraw(cls):
+            return cls.p[0][0][1]
+
+        def action(self):
+            self.timer=(self.timer+1)%4
+
+        def update_outputs(self):
+            tps=[100,300,500,1000][self.timer]
+            st=self.istates[0]
+            self.boss.tk.after(tps,lambda st=st: self.set_output(0,st))
+    return _Delayer
+
 def Piston_all(rs,plst):
     class _Piston(Mesecon_thing):
         name="Piston"
@@ -1077,16 +1165,24 @@ def Piston_all(rs,plst):
                 return
             self.st=st
             if self.st:
+                can=False
                 for i in range(1,15):
                     posx,posy,posz=self.x+rs[0]*i,self.y+rs[1]*i,self.z+rs[2]*i
                     p=self.boss.l[posx][posy][posz]
-                    if p==None or (hasattr(p,"unpushable") and p.unpushable):
+                    if p==None:
+                        break
+                    elif (hasattr(p,"unpushable") and p.unpushable):
+                        can=True
                         break
                     else:
                         l.append(p)
                 else:
                     self.st=0
                     self.unpushable=False
+                    return
+                if can:
+                    self.st=0
+                    self.unpushable=True
                     return
                 posx,posy,posz=self.x+rs[0],self.y+rs[1],self.z+rs[2]
                 self.boss.chpos(posx,posy,posz,_Piston_Head())
@@ -1129,7 +1225,9 @@ def Piston(i):
     return Piston_all(rotate_left_n([[1,0,0]],i)[0],plst)
 
 Piston_Up=Piston_all([0,1,0],[2,5,2])
+Piston_Up.__name__='Piston_Up'
 Piston_Down=Piston_all([0,-1,0],[0,4,0])
+Piston_Down.__name__='Piston_Down'
 
 def Sticky_Piston_all(rs,plst):
     class _Sticky_Piston(Mesecon_thing):
@@ -1165,16 +1263,24 @@ def Sticky_Piston_all(rs,plst):
                 return
             self.st=st
             if self.st:
+                can=False
                 for i in range(1,15):
                     posx,posy,posz=self.x+rs[0]*i,self.y+rs[1]*i,self.z+rs[2]*i
                     p=self.boss.l[posx][posy][posz]
-                    if p==None or (hasattr(p,"unpushable") and p.unpushable):
+                    if p==None:
+                        break
+                    elif (hasattr(p,"unpushable") and p.unpushable):
+                        can=True
                         break
                     else:
                         l.append(p)
                 else:
                     self.st=0
                     self.unpushable=False
+                    return
+                if can:
+                    self.st=0
+                    self.unpushable=True
                     return
                 posx,posy,posz=self.x+rs[0],self.y+rs[1],self.z+rs[2]
                 self.boss.chpos(posx,posy,posz,_Sticky_Piston_Head())
@@ -1225,14 +1331,12 @@ def Sticky_Piston(i):
     return Sticky_Piston_all(rotate_left_n([[1,0,0]],i)[0],plst)
 
 Sticky_Piston_Up=Sticky_Piston_all([0,1,0],[2,5,2])
+Sticky_Piston_Up.__name__='Sticky_Piston_Up'
 Sticky_Piston_Down=Sticky_Piston_all([0,-1,0],[0,4,0])
+Sticky_Piston_Down.__name__='Sticky_Piston_Down'
 
 Inverters=rotated(Inverter,4)
 t=Inverters(0,0,0,0)
-#print (t.__class__ is ClassContainer._Inverter0)
-#print ClassContainer._Inverter0.__name__
-#b=pickle.dumps(t)
-#print str(b)
 Diodes=rotated(Diode,4)
 Ands=rotated(And,4)
 Nands=rotated(Nand,4)
@@ -1241,9 +1345,10 @@ Insulateds=rotated(Insulated,2)
 Insulated_ts=rotated(Insulated_t,4)
 Pistons=rotated(Piston,4)
 Sticky_Pistons=rotated(Sticky_Piston,4)
+Delayers=rotated(Delayer,4)
 
 a.set_buttons(Normal_block,Mesecon,Switch,Inverters,Diodes,Ands,Nands,Xors,Insulateds,
               Insulated_ts,RedLightStone,Pistons,Piston_Up,Piston_Down,Sticky_Pistons,Sticky_Piston_Up,
-              Sticky_Piston_Down)
+              Sticky_Piston_Down,Sand,Delayers)
 os.chdir(TOPDIR)
 a.mainloop()
