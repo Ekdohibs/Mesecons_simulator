@@ -81,6 +81,9 @@ class Mesecon_thing(object):
         self.groups_i=[None]*len(inputs)
         self.groups_o=[None]*len(outputs)
 
+    def reset(self):
+        self.isates=[0]*len(self.inputs)
+
     def get_group_i(self,n):
         return self.groups_i[n]
 
@@ -1131,6 +1134,9 @@ def Delayer(i):
             self.boss.tk.after(tps,lambda st=st: self.set_output(0,st))
     return _Delayer
 
+def piston_rules(rs):
+    return [i for i in default_rules if i!=rs]
+
 def Piston_all(rs,plst):
     class _Piston(Mesecon_thing):
         name="Piston"
@@ -1141,7 +1147,7 @@ def Piston_all(rs,plst):
             PhotoImage(file='piston_%s_on.gif'%plst[1]),
             PhotoImage(file='piston_%s_on.gif'%plst[2])]]
         def __init__(self,boss,x,y,z):
-            Mesecon_thing.__init__(self,default_rules,[])
+            Mesecon_thing.__init__(self,piston_rules(rs),[])
             self.x,self.y,self.z,self.boss=x,y,z,boss
             self.st=False
             self.unpushable=False
@@ -1193,6 +1199,8 @@ def Piston_all(rs,plst):
                     p=l[i]
                     if hasattr(p,'update_pos'):
                         p.update_pos(rs[0],rs[1],rs[2])
+                    if p.t=="thing":
+                        p.reset()
                     posx,posy,posz=self.x+rs[0]*(i+2),self.y+rs[1]*(i+2),self.z+rs[2]*(i+2)
                     self.boss.chpos(posx,posy,posz,p)
             else:
@@ -1239,7 +1247,7 @@ def Sticky_Piston_all(rs,plst):
             PhotoImage(file='sticky_piston_%s_on.gif'%plst[1]),
             PhotoImage(file='sticky_piston_%s_on.gif'%plst[2])]]
         def __init__(self,boss,x,y,z):
-            Mesecon_thing.__init__(self,default_rules,[])
+            Mesecon_thing.__init__(self,piston_rules(rs),[])
             self.x,self.y,self.z,self.boss=x,y,z,boss
             self.st=False
             self.unpushable=False
@@ -1291,6 +1299,8 @@ def Sticky_Piston_all(rs,plst):
                     p=l[i]
                     if hasattr(p,'update_pos'):
                         p.update_pos(rs[0],rs[1],rs[2])
+                    if p.t=="thing":
+                        p.reset()
                     posx,posy,posz=self.x+rs[0]*(i+2),self.y+rs[1]*(i+2),self.z+rs[2]*(i+2)
                     self.boss.chpos(posx,posy,posz,p)
             else:
@@ -1302,6 +1312,8 @@ def Sticky_Piston_all(rs,plst):
                 else:
                     if hasattr(p,'update_pos'):
                         p.update_pos(-rs[0],-rs[1],-rs[2])
+                    if p.t=="thing":
+                        p.reset()
                     self.boss.chpos(posx2,posy2,posz2,None)
                     self.boss.chpos(posx,posy,posz,p)
             self.unpushable=self.st
