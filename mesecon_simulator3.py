@@ -440,8 +440,8 @@ class Application:
         self.abms=[]
         self.abm_gen=0
         self.abm()
-        self.tk.bind("<Key-0x003c>",self.levup)
-        self.tk.bind("<Key-0x003e>",self.levdown)
+        self.tk.bind("<z>",self.levup)
+        self.tk.bind("<s>",self.levdown)
         self.tk.bind("<r>",self.rotate)
         self.tk.bind("<Control-o>",self.open_command)
         self.tk.bind("<Control-s>",self.save_command)
@@ -1135,7 +1135,7 @@ def Delayer(i):
     return _Delayer
 
 def piston_rules(rs):
-    return list(set(default_rules).discard(rs))
+    return [i for i in default_rules if i!=rs]
 
 def Piston_all(rs,plst):
     class _Piston(Mesecon_thing):

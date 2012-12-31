@@ -441,8 +441,8 @@ class Application:
         self.abms=[]
         self.abm_gen=0
         self.abm()
-        self.tk.bind("<Key-0x003c>",self.levup)
-        self.tk.bind("<Key-0x003e>",self.levdown)
+        self.tk.bind("<z>",self.levup)
+        self.tk.bind("<s>",self.levdown)
         self.tk.bind("<r>",self.rotate)
         self.tk.bind("<Control-o>",self.open_command)
         self.tk.bind("<Control-s>",self.save_command)
